@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1250 1250">
+  <defs>
+    <!-- Apple-style subtle black gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1f1f1f"/>
+      <stop offset="40%" stop-color="#101010"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </linearGradient>
+
+    <!-- Very soft top-left highlight -->
+    <radialGradient id="glossTL" cx="28%" cy="20%" r="65%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.10"/>
+      <stop offset="45%" stop-color="#ffffff" stop-opacity="0.035"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Tiny secondary highlight -->
+    <radialGradient id="glossTR" cx="82%" cy="15%" r="28%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Slight bottom shading -->
+    <linearGradient id="edgeShade" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.15"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect
+    x="80"
+    y="65"
+    width="1090"
+    height="1090"
+    rx="180"
+    ry="180"
+    fill="url(#bgGrad)"/>
+
+  <rect
+    x="80"
+    y="65"
+    width="1090"
+    height="1090"
+    rx="180"
+    ry="180"
+    fill="url(#glossTL)"/>
+
+  <rect
+    x="80"
+    y="65"
+    width="1090"
+    height="1090"
+    rx="180"
+    ry="180"
+    fill="url(#glossTR)"/>
+
+  <rect
+    x="80"
+    y="65"
+    width="1090"
+    height="1090"
+    rx="180"
+    ry="180"
+    fill="url(#edgeShade)"/>
+
+  <!-- Ticket -->
+  <g
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="34"
+    stroke-linecap="round"
+    stroke-linejoin="round">
+
+    <path d="
+      M340 285
+      H910
+
+      A50 50 0 0 1 910 375
+      A42 42 0 0 0 910 545
+      A50 50 0 0 1 910 635
+
+      H340
+
+      A50 50 0 0 1 340 545
+      A42 42 0 0 0 340 375
+      A50 50 0 0 1 340 285
+      Z"/>
+
+    <!-- Perforation -->
+    <path
+      d="M625 315V605"
+      stroke-width="14"
+      stroke-dasharray="6 20"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text
+    x="625"
+    y="930"
+    text-anchor="middle"
+    font-family="SF Pro Display, Inter, Helvetica Neue, Helvetica, Arial, sans-serif"
+    font-size="165"
+    font-weight="600"
+    letter-spacing="-5"
+    fill="#ffffff">
+    passcount
+  </text>
+</svg>

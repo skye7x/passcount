@@ -102,3 +102,6 @@ next.config.js      output: "export" — required for Capacitor
 - The Edit screen uses a query param (`/edit/?id=...`) rather than a
   dynamic route segment (`/edit/[id]`) so it works cleanly with static
   export without needing `generateStaticParams`.
+
+
+IM TO LAZY SO I GENERATED README USING CHATPGPT

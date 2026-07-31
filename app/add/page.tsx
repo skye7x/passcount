@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCounters } from '@/lib/CounterContext';
 import { ColorPicker } from '@/components/ColorPicker';
+import { dateInputToTimestamp } from '@/lib/dates';
 import { X, Check } from 'lucide-react';
 
 export default function AddCounterPage() {
@@ -12,6 +13,7 @@ export default function AddCounterPage() {
   const [name, setName] = useState('');
   const [total, setTotal] = useState('');
   const [color, setColor] = useState('#007AFF');
+  const [expiresDate, setExpiresDate] = useState('');
   const [error, setError] = useState('');
 
   const handleSave = () => {
@@ -25,7 +27,7 @@ export default function AddCounterPage() {
       setError('Enter a valid number of passes');
       return;
     }
-    addCounter(trimmed, count, color);
+    addCounter(trimmed, count, color, dateInputToTimestamp(expiresDate));
     router.back();
   };
 
@@ -84,6 +86,29 @@ export default function AddCounterPage() {
               inputMode="numeric"
               maxLength={5}
             />
+          </div>
+
+          <div className="form__group">
+            <span className="form__label">Expires At (optional)</span>
+            <div className="date-row">
+              <input
+                id="expires"
+                className="form__input date-row__input"
+                type="date"
+                value={expiresDate}
+                onChange={e => setExpiresDate(e.target.value)}
+              />
+              {expiresDate && (
+                <button
+                  type="button"
+                  className="add-item-row__cancel"
+                  aria-label="Clear expiry date"
+                  onClick={() => setExpiresDate('')}>
+                  <X size={18} />
+                </button>
+              )}
+            </div>
+            <p className="add-item-row__hint">Get a reminder when your pass is about to expire</p>
           </div>
 
           <div className="form__group">

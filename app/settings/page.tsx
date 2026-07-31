@@ -1,10 +1,12 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { useState } from 'react';
 import { useCounters } from '@/lib/CounterContext';
 import { AppSettings } from '@/lib/types';
 import { BottomNav } from '@/components/BottomNav';
-import { Smartphone, Trash2, Bell, BellOff } from 'lucide-react';
+import { Smartphone, Trash2, Bell, BellOff, Send } from 'lucide-react';
+import { requestNotificationPermission, sendTestNotification } from '@/lib/notifications';
 
 function Toggle({
   checked,
@@ -75,6 +77,33 @@ function SortOption({
 
 export default function SettingsPage() {
   const { settings, updateSettings } = useCounters();
+  const [testStatus, setTestStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+
+  const handleNotificationsToggle = async (v: boolean) => {
+    if (v) {
+      const granted = await requestNotificationPermission();
+      if (!granted) return;
+    }
+    updateSettings({ notificationsEnabled: v });
+  };
+
+  const handleTestNotification = async () => {
+    if (!settings.notificationsEnabled) {
+      const granted = await requestNotificationPermission();
+      if (!granted) {
+        setTestStatus('error');
+        return;
+      }
+      updateSettings({ notificationsEnabled: true });
+    }
+    setTestStatus('sending');
+    try {
+      await sendTestNotification();
+      setTestStatus('sent');
+    } catch {
+      setTestStatus('error');
+    }
+  };
 
   return (
     <div className="page page--home">
@@ -117,11 +146,34 @@ export default function SettingsPage() {
               right={
                 <Toggle
                   checked={settings.notificationsEnabled}
-                  onChange={v => updateSettings({ notificationsEnabled: v })}
+                  onChange={handleNotificationsToggle}
                   label="Notifications"
                 />
               }
             />
+            {settings.notificationsEnabled && (
+              <button
+                type="button"
+                className="setting-row setting-row--action"
+                onClick={handleTestNotification}
+                disabled={testStatus === 'sending'}>
+                <span className="setting-row__icon">
+                  <Send size={20} />
+                </span>
+                <div className="setting-row__text">
+                  <p className="setting-row__label">Send Test Notification</p>
+                  <p className="setting-row__desc">
+                    {testStatus === 'sending'
+                      ? 'Sending…'
+                      : testStatus === 'sent'
+                        ? 'Sent — check your notifications'
+                        : testStatus === 'error'
+                          ? 'Failed — check app notification permission'
+                          : 'Shows a test notification in a few seconds'}
+                  </p>
+                </div>
+              </button>
+            )}
           </div>
 
           <p className="settings-section-title">Sort Order</p>

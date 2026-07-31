@@ -5,6 +5,7 @@ export interface Counter {
   remaining: number;
   color: string;
   createdAt: number;
+  expiresAt: number | null;
 }
 
 export interface LogEntry {
@@ -23,6 +24,22 @@ export interface Training {
   minute: number;
   enabled: boolean;
   color: string;
+}
+
+export interface EquipmentItem {
+  id: string;
+  name: string;
+  packed: boolean;
+}
+
+export interface EquipmentList {
+  id: string;
+  name: string;
+  color: string;
+  items: EquipmentItem[];
+  packed: boolean;
+  packedAt: number | null;
+  createdAt: number;
 }
 
 export interface AppSettings {

@@ -7,19 +7,25 @@ import { FloatingActionButton } from '@/components/FloatingActionButton';
 import { EmptyState } from '@/components/EmptyState';
 import { Dumbbell, Clock, Bell, BellOff } from 'lucide-react';
 import { requestNotificationPermission } from '@/lib/notifications';
+import { triggerHaptic } from '@/lib/haptics';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export default function TrainingsPage() {
-  const { trainings, updateTraining, deleteTraining, settings } = useCounters();
+  const { trainings, updateTraining, deleteTraining, settings, updateSettings } = useCounters();
   const router = useRouter();
 
-  const handleToggle = async (id: string, enabled: boolean) => {
-    if (enabled && settings.notificationsEnabled) {
+  const handleToggle = async (id: string, currentlyEnabled: boolean) => {
+    const target = !currentlyEnabled;
+    if (target) {
       const granted = await requestNotificationPermission();
       if (!granted) return;
+      if (settings.hapticFeedback) triggerHaptic('light');
+      if (!settings.notificationsEnabled) {
+        updateSettings({ notificationsEnabled: true });
+      }
     }
-    updateTraining(id, { enabled: !enabled });
+    updateTraining(id, { enabled: target });
   };
 
   return (

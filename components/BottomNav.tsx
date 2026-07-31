@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Ticket, Settings, Dumbbell, History } from 'lucide-react';
+import { Ticket, Settings, Dumbbell, History, Package } from 'lucide-react';
 
 const TABS = [
   { href: '/', label: 'Counters', icon: Ticket },
   { href: '/trainings/', label: 'Trainings', icon: Dumbbell },
+  { href: '/equipment/', label: 'Equipment', icon: Package },
   { href: '/log/', label: 'History', icon: History },
   { href: '/settings/', label: 'Settings', icon: Settings },
 ];

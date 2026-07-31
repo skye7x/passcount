@@ -5,7 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useCounters } from '@/lib/CounterContext';
 import { ColorPicker } from '@/components/ColorPicker';
 import { ActionSheet } from '@/components/ActionSheet';
-import { ArrowLeft, Check, RotateCcw, Trash2 } from 'lucide-react';
+import { toDateInput, dateInputToTimestamp } from '@/lib/dates';
+import { ArrowLeft, Check, RotateCcw, Trash2, X } from 'lucide-react';
 
 function EditCounterForm() {
   const router = useRouter();
@@ -21,6 +22,9 @@ function EditCounterForm() {
   const [name, setName] = useState(counter?.name ?? '');
   const [total, setTotal] = useState(String(counter?.total ?? ''));
   const [color, setColor] = useState(counter?.color ?? '#007AFF');
+  const [expiresDate, setExpiresDate] = useState(
+    counter?.expiresAt ? toDateInput(counter.expiresAt) : '',
+  );
   const [error, setError] = useState('');
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
@@ -45,7 +49,7 @@ function EditCounterForm() {
       setError('Enter a valid number of passes');
       return;
     }
-    updateCounter(counter.id, trimmed, count, color);
+    updateCounter(counter.id, trimmed, count, color, dateInputToTimestamp(expiresDate));
     router.back();
   };
 
@@ -111,6 +115,29 @@ function EditCounterForm() {
               inputMode="numeric"
               maxLength={5}
             />
+          </div>
+
+          <div className="form__group">
+            <span className="form__label">Expires At (optional)</span>
+            <div className="date-row">
+              <input
+                id="expires"
+                className="form__input date-row__input"
+                type="date"
+                value={expiresDate}
+                onChange={e => setExpiresDate(e.target.value)}
+              />
+              {expiresDate && (
+                <button
+                  type="button"
+                  className="add-item-row__cancel"
+                  aria-label="Clear expiry date"
+                  onClick={() => setExpiresDate('')}>
+                  <X size={18} />
+                </button>
+              )}
+            </div>
+            <p className="add-item-row__hint">Get a reminder when your pass is about to expire</p>
           </div>
 
           <div className="form__group">

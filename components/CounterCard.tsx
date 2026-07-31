@@ -2,7 +2,8 @@
 
 import { useRef, useState } from 'react';
 import { Counter } from '@/lib/types';
-import { Ban, AlertTriangle } from 'lucide-react';
+import { formatShortDate } from '@/lib/dates';
+import { Ban, AlertTriangle, Clock } from 'lucide-react';
 
 interface CounterCardProps {
   counter: Counter;
@@ -20,6 +21,12 @@ export function CounterCard({ counter, onTap, onLongPress }: CounterCardProps) {
   const progress = counter.total > 0 ? counter.remaining / counter.total : 0;
   const isLow = counter.remaining <= Math.ceil(counter.total * 0.2) && counter.remaining > 0;
   const isDepleted = counter.remaining === 0;
+
+  const now = Date.now();
+  const expiresAt = counter.expiresAt ?? null;
+  const isExpired = expiresAt !== null && expiresAt < now;
+  const expiresSoon =
+    expiresAt !== null && !isExpired && expiresAt <= now + 14 * 24 * 60 * 60 * 1000;
 
   const clearTimer = () => {
     if (timerRef.current) {
@@ -81,6 +88,14 @@ export function CounterCard({ counter, onTap, onLongPress }: CounterCardProps) {
       <div className="counter-card__content">
         <div className="counter-card__top-row">
           <span className="counter-card__name">{counter.name}</span>
+          {isExpired ? (
+            <span className="counter-card__tag counter-card__tag--expired">Expired</span>
+          ) : expiresSoon ? (
+            <span className="counter-card__tag counter-card__tag--expiring">
+              <Clock size={12} style={{ marginRight: 2, verticalAlign: 'middle' }} />
+              {expiresAt !== null ? formatShortDate(expiresAt) : ''}
+            </span>
+          ) : null}
           {isLow && !isDepleted && (
             <span className="counter-card__tag">
               <AlertTriangle size={12} style={{ marginRight: 2, verticalAlign: 'middle' }} />

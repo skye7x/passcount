@@ -211,7 +211,7 @@ export async function sendTestNotification(): Promise<void> {
       notifications: [
         {
           title: 'PassCount',
-          body: 'Test notification — everything works!',
+          body: 'Test notification, everything works!',
           id: TEST_NOTIFICATION_ID,
           schedule: {
             at: new Date(Date.now() + 3000),

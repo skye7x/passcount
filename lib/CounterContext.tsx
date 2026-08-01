@@ -6,6 +6,7 @@ import React, {
   useEffect,
   useState,
   useCallback,
+  useRef,
 } from 'react';
 import {
   Counter,
@@ -137,9 +138,26 @@ export function CounterProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!loading && settings.notificationsEnabled) {
       rescheduleAllTrainings(trainings);
+    }
+  }, [trainings, settings.notificationsEnabled, loading]);
+
+  const lastExpirySignatureRef = useRef('');
+  const lastEnabledRef = useRef(false);
+
+  useEffect(() => {
+    if (loading) return;
+    const wasEnabled = lastEnabledRef.current;
+    lastEnabledRef.current = settings.notificationsEnabled;
+    const signature = counters
+      .map(counter => `${counter.id}:${counter.expiresAt ?? ''}`)
+      .join('|');
+    const justEnabled = settings.notificationsEnabled && !wasEnabled;
+    if (!justEnabled && lastExpirySignatureRef.current === signature) return;
+    lastExpirySignatureRef.current = signature;
+    if (settings.notificationsEnabled) {
       rescheduleAllExpiryNotifications(counters);
     }
-  }, [trainings, counters, settings.notificationsEnabled, loading]);
+  }, [counters, settings.notificationsEnabled, loading]);
 
   useEffect(() => {
     if (loading) return;

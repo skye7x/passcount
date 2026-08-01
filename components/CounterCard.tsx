@@ -120,6 +120,11 @@ export function CounterCard({ counter, onTap, onLongPress }: CounterCardProps) {
             }}
           />
         </div>
+        {expiresAt !== null && !isExpired && !expiresSoon && (
+          <span className="counter-card__expires">
+            Expires {formatShortDate(expiresAt)}
+          </span>
+        )}
       </div>
     </button>
   );

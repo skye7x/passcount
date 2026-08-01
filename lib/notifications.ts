@@ -20,27 +20,19 @@ function notificationId(hashBase: string): number {
 }
 
 function trainingNotificationId(trainingId: string, dayIndex: number): number {
-  return notificationId(trainingId.slice(0, 8) + String(dayIndex));
+  return notificationId(trainingId + String(dayIndex));
 }
 
 function counterNotificationId(counterId: string, type: ExpiryNotificationType): number {
-  return notificationId(counterId.slice(0, 8) + type);
+  return notificationId(counterId + type);
 }
 
-async function nativePermissionGranted(): Promise<boolean> {
+async function isNativePlatform(): Promise<boolean> {
   if (typeof window === 'undefined') return false;
   try {
     const { Capacitor } = await import('@capacitor/core');
-    if (!Capacitor.isNativePlatform()) return false;
+    return Capacitor.isNativePlatform();
   } catch {
-    return false;
-  }
-  try {
-    const { LocalNotifications } = await import('@capacitor/local-notifications');
-    const perms = await LocalNotifications.checkPermissions();
-    return perms.display === 'granted';
-  } catch (e) {
-    console.error('Failed to check notification permission', e);
     return false;
   }
 }
@@ -124,6 +116,7 @@ function reminderAt(expiresAt: number, daysBefore: number): Date {
 export async function scheduleExpiryNotifications(counter: Counter): Promise<void> {
   if (typeof window === 'undefined') return;
   if (!counter.expiresAt) return;
+  if (!(await isNativePlatform())) return;
 
   const now = Date.now();
   const reminders: { type: ExpiryNotificationType; at: Date; body: string }[] = [
@@ -186,14 +179,25 @@ export async function cancelCounterNotifications(counterId: string): Promise<voi
 
 export async function rescheduleAllExpiryNotifications(counters: Counter[]): Promise<void> {
   if (typeof window === 'undefined') return;
-  if (!(await nativePermissionGranted())) {
-    console.warn('Notification permission not granted, skipping expiry scheduling');
-    return;
-  }
+  if (!(await isNativePlatform())) return;
 
   for (const counter of counters) {
     await cancelCounterNotifications(counter.id);
     await scheduleExpiryNotifications(counter);
+  }
+}
+
+export async function getPendingNotificationsCount(): Promise<number> {
+  if (typeof window === 'undefined') return 0;
+  if (!(await isNativePlatform())) return 0;
+
+  try {
+    const { LocalNotifications } = await import('@capacitor/local-notifications');
+    const pending = await LocalNotifications.getPending();
+    return pending.notifications.length;
+  } catch (e) {
+    console.error('Failed to read pending notifications', e);
+    return 0;
   }
 }
 

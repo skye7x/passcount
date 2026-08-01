@@ -1,12 +1,16 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useCounters } from '@/lib/CounterContext';
 import { AppSettings } from '@/lib/types';
 import { BottomNav } from '@/components/BottomNav';
 import { Smartphone, Trash2, Bell, BellOff, Send } from 'lucide-react';
-import { requestNotificationPermission, sendTestNotification } from '@/lib/notifications';
+import {
+  requestNotificationPermission,
+  sendTestNotification,
+  getPendingNotificationsCount,
+} from '@/lib/notifications';
 
 function Toggle({
   checked,
@@ -78,6 +82,27 @@ function SortOption({
 export default function SettingsPage() {
   const { settings, updateSettings } = useCounters();
   const [testStatus, setTestStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [pendingCount, setPendingCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const fetchCount = () =>
+      getPendingNotificationsCount().then(count => {
+        if (active) setPendingCount(count);
+      });
+    if (settings.notificationsEnabled) {
+      fetchCount();
+      const timeout = setTimeout(fetchCount, 800);
+      return () => {
+        active = false;
+        clearTimeout(timeout);
+      };
+    }
+    setPendingCount(null);
+    return () => {
+      active = false;
+    };
+  }, [settings.notificationsEnabled]);
 
   const handleNotificationsToggle = async (v: boolean) => {
     if (v) {
@@ -104,6 +129,11 @@ export default function SettingsPage() {
       setTestStatus('error');
     }
   };
+
+  const notificationsDescription =
+    settings.notificationsEnabled && pendingCount !== null
+      ? `${pendingCount} reminder${pendingCount !== 1 ? 's' : ''} scheduled`
+      : 'Pass expiry and training reminders';
 
   return (
     <div className="page page--home">
@@ -142,7 +172,7 @@ export default function SettingsPage() {
             <SettingRow
               icon={settings.notificationsEnabled ? <Bell size={20} /> : <BellOff size={20} />}
               label="Notifications"
-              description="Training reminders and alerts"
+              description={notificationsDescription}
               right={
                 <Toggle
                   checked={settings.notificationsEnabled}

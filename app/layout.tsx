@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { CounterProvider } from '@/lib/CounterContext';
+import { AuthProvider } from '@/lib/AuthContext';
 import { ServiceWorker } from '@/components/ServiceWorker';
 import './globals.css';
 
@@ -27,10 +28,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <CounterProvider>
-          {children}
-          <ServiceWorker />
-        </CounterProvider>
+        <AuthProvider>
+          <CounterProvider>
+            {children}
+            <ServiceWorker />
+          </CounterProvider>
+        </AuthProvider>
       </body>
     </html>
   );

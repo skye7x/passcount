@@ -80,6 +80,32 @@ npm run cap:ios        # opens Xcode (macOS only)
 
 From there, run on a simulator/device or build a release APK/IPA as usual.
 
+## Optional account + cloud sync
+
+The app now has an **optional** account system (Settings → Account) backed
+by a separate ASP.NET Core API in `backend/`. Signing in is entirely
+optional — everything still works fully offline with local storage, exactly
+as before, if you never create an account.
+
+When signed in, counters, logs, trainings, equipment lists and settings
+sync to the cloud automatically in the background, so they carry over to a
+new device or a reinstall.
+
+To use it:
+1. Set up and deploy the backend — see `backend/README.md` for full
+   instructions (local dev, Azure deployment, required app settings).
+2. Copy `.env.local.example` to `.env.local` and point `NEXT_PUBLIC_API_URL`
+   at your running API. Rebuild the app afterwards (it's baked in at build
+   time).
+
+```
+app/account/          Sign in / create account UI
+lib/api.ts             Typed API client + token storage (Capacitor Preferences)
+lib/AuthContext.tsx     Auth state (login/register/logout)
+lib/useSyncEngine.ts    Pull-on-login, debounced push-on-change, conflict prompt
+backend/PassCount.Api/  ASP.NET Core 8 Web API (Identity, JWT, EF Core)
+```
+
 ## Project structure
 
 ```

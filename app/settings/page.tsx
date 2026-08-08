@@ -2,10 +2,12 @@
 
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useCounters } from '@/lib/CounterContext';
+import { useAuth } from '@/lib/AuthContext';
 import { AppSettings } from '@/lib/types';
 import { BottomNav } from '@/components/BottomNav';
-import { Smartphone, Trash2, Bell, BellOff, Send } from 'lucide-react';
+import { Smartphone, Trash2, Bell, BellOff, Send, User, Cloud, RefreshCw, CloudOff } from 'lucide-react';
 import {
   requestNotificationPermission,
   sendTestNotification,
@@ -80,7 +82,9 @@ function SortOption({
 }
 
 export default function SettingsPage() {
-  const { settings, updateSettings } = useCounters();
+  const router = useRouter();
+  const { settings, updateSettings, syncStatus } = useCounters();
+  const { email, isAuthenticated } = useAuth();
   const [testStatus, setTestStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [pendingCount, setPendingCount] = useState<number | null>(null);
 
@@ -142,6 +146,41 @@ export default function SettingsPage() {
           <h1 className="home-header__title" style={{ marginBottom: 8 }}>
             Settings
           </h1>
+
+          <p className="settings-section-title">Account</p>
+          <div className="settings-card">
+            <button
+              type="button"
+              className="setting-row setting-row--action"
+              onClick={() => router.push('/account')}>
+              <span className="setting-row__icon">
+                <User size={20} />
+              </span>
+              <div className="setting-row__text">
+                <p className="setting-row__label">{isAuthenticated ? email : 'Sign In / Create Account'}</p>
+                <p className="setting-row__desc">
+                  {isAuthenticated
+                    ? syncStatus === 'syncing'
+                      ? 'Syncing…'
+                      : syncStatus === 'error'
+                        ? 'Sync error — tap for details'
+                        : syncStatus === 'conflict'
+                          ? 'Action needed — tap for details'
+                          : 'Backed up to the cloud'
+                    : 'Optional — back up and sync across devices'}
+                </p>
+              </div>
+              <span className="setting-row__icon">
+                {!isAuthenticated ? null : syncStatus === 'syncing' ? (
+                  <RefreshCw size={18} className="spin" />
+                ) : syncStatus === 'error' ? (
+                  <CloudOff size={18} />
+                ) : (
+                  <Cloud size={18} />
+                )}
+              </span>
+            </button>
+          </div>
 
           <p className="settings-section-title">Preferences</p>
           <div className="settings-card">

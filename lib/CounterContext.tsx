@@ -23,13 +23,18 @@ import {
   rescheduleAllExpiryNotifications,
   cancelCounterNotifications,
 } from './notifications';
-
-const STORAGE_KEY_COUNTERS = 'passcount_counters';
-const STORAGE_KEY_SETTINGS = 'passcount_settings';
-const STORAGE_KEY_LOGS = 'passcount_logs';
-const STORAGE_KEY_TRAININGS = 'passcount_trainings';
-const STORAGE_KEY_EQUIPMENT = 'passcount_equipment';
-const STORAGE_KEY_EQUIPMENT_DAY = 'passcount_equipment_day';
+import {
+  readStorage,
+  writeStorage,
+  STORAGE_KEY_COUNTERS,
+  STORAGE_KEY_SETTINGS,
+  STORAGE_KEY_LOGS,
+  STORAGE_KEY_TRAININGS,
+  STORAGE_KEY_EQUIPMENT,
+  STORAGE_KEY_EQUIPMENT_DAY,
+} from './storage';
+import { useSyncEngine, SyncStatus, SyncConflict } from './useSyncEngine';
+import { CloudSnapshot } from './api';
 
 interface CounterContextType {
   counters: Counter[];
@@ -61,6 +66,11 @@ interface CounterContextType {
   removeEquipmentItem: (listId: string, itemId: string) => void;
   setEquipmentPacked: (listId: string, packed: boolean) => void;
   loading: boolean;
+  syncStatus: SyncStatus;
+  syncError: string | null;
+  syncConflict: SyncConflict | null;
+  resolveSyncConflict: (choice: 'local' | 'remote') => Promise<void>;
+  lastSyncedAt: number | null;
 }
 
 const CounterContext = createContext<CounterContextType | null>(null);
@@ -82,25 +92,6 @@ function resetEquipmentPacked(lists: EquipmentList[]): EquipmentList[] {
     packedAt: null,
     items: list.items.map(item => ({ ...item, packed: false })),
   }));
-}
-
-function readStorage<T>(key: string, fallback: T): T {
-  if (typeof window === 'undefined') return fallback;
-  try {
-    const raw = window.localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function writeStorage<T>(key: string, value: T): void {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(key, JSON.stringify(value));
-  } catch (e) {
-    console.error('Failed to persist data', e);
-  }
 }
 
 export function CounterProvider({ children }: { children: React.ReactNode }) {
@@ -406,6 +397,30 @@ export function CounterProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const applySnapshot = useCallback((snapshot: CloudSnapshot) => {
+    setCounters(snapshot.counters);
+    setSettings({ ...DEFAULT_SETTINGS, ...snapshot.settings });
+    setLogs(snapshot.logs);
+    setTrainings(snapshot.trainings);
+    setEquipment(snapshot.equipment);
+    writeStorage(STORAGE_KEY_COUNTERS, snapshot.counters);
+    writeStorage(STORAGE_KEY_SETTINGS, snapshot.settings);
+    writeStorage(STORAGE_KEY_LOGS, snapshot.logs);
+    writeStorage(STORAGE_KEY_TRAININGS, snapshot.trainings);
+    writeStorage(STORAGE_KEY_EQUIPMENT, snapshot.equipment);
+  }, []);
+
+  const { status: syncStatus, error: syncError, conflict: syncConflict, resolveConflict: resolveSyncConflict, lastSyncedAt } =
+    useSyncEngine({
+      ready: !loading,
+      counters,
+      settings,
+      logs,
+      trainings,
+      equipment,
+      applySnapshot,
+    });
+
   return (
     <CounterContext.Provider
       value={{
@@ -432,6 +447,11 @@ export function CounterProvider({ children }: { children: React.ReactNode }) {
         removeEquipmentItem,
         setEquipmentPacked,
         loading,
+        syncStatus,
+        syncError,
+        syncConflict,
+        resolveSyncConflict,
+        lastSyncedAt,
       }}>
       {children}
     </CounterContext.Provider>

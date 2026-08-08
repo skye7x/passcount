@@ -1395,3 +1395,54 @@ a {
 .page--modal {
   animation: pageIn 0.25s cubic-bezier(0.32, 0.72, 0, 1);
 }
+
+/* ---------- Account / Sync ---------- */
+.account-tabs {
+  display: flex;
+  gap: var(--space-xs);
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 4px;
+}
+
+.account-tab {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: calc(var(--radius) - 4px);
+  background: transparent;
+  color: var(--label-tertiary);
+  font-size: 15px;
+  font-weight: 600;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.account-tab--active {
+  background: var(--surface-secondary);
+  color: var(--label);
+}
+
+.sync-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 14px;
+  color: var(--label-secondary);
+}
+
+.sync-badge--error {
+  color: var(--red);
+}
+
+.sync-badge--conflict {
+  color: var(--orange);
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

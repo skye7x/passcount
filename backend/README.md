@@ -94,61 +94,120 @@ dotnet add package Pomelo.EntityFrameworkCore.MySql
 The dev JWT signing key in `appsettings.Development.json` is a placeholder —
 fine for local dev, **never use it in production**.
 
-## Deploying to your Azure App Service
+## Deployment: API on Azure, database on your VPS (Docker)
 
-This targets **.NET 10 (LTS)** — matching what you originally picked in the
-Azure portal. (I'd initially written it against .NET 8 since I couldn't
-compile-check the code myself and trusted my own .NET 8 syntax more — but
-.NET 8 support ends November 10, 2026, only a few months out, while .NET 10
-is supported until November 2028. Not worth the tradeoff, so it's back to
-.NET 10 — just be extra ready to send me any build errors, since my
-confidence in exact .NET 10 package versions/syntax is a notch lower than
-.NET 8 without a compiler to check against.)
+This is the setup this project is documented for. The database runs in
+Docker on your own VPS (files in `backend/docker/`); the API runs on a
+**plain Azure App Service** — just the Web App, no bundled database, no
+VNet — which sidesteps the regional-policy restrictions the combined
+"Web App + Database" wizard kept hitting on the Azure for Students
+subscription.
 
-When creating/editing the App Service, pick **.NET 10 (LTS)** as the runtime
-stack.
+### Step 1 — MySQL on your VPS, via Docker
 
-### App settings you need to configure in Azure
+SSH into your VPS. Install Docker if you don't have it:
+```bash
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker $USER   # log out/in after this
+```
 
-In the App Service → **Settings → Environment variables** (or "Configuration"
-→ "Application settings"), add:
+Copy `backend/docker/` from this repo onto the VPS (`scp -r backend/docker
+youruser@your-vps:~/passcount-docker`), then:
+```bash
+cd passcount-docker
+cp .env.example .env
+nano .env   # fill in real, long, random passwords
+docker compose up -d
+```
+This starts MySQL 8 in a container with a persistent volume (survives
+container restarts/updates) and creates the `passcountdb` database plus a
+scoped `passcount_api` user automatically from your `.env` values — the
+app never needs the root password.
+
+Check it's healthy:
+```bash
+docker compose ps          # should show "healthy"
+docker compose logs -f     # Ctrl+C to stop watching
+```
+
+### Step 2 — Lock the database down
+
+Your VPS is now listening on port 3306 to the whole internet, which needs
+tightening before you put real data behind it.
+
+**Get Azure's outbound IP addresses first**, so you know what to allow:
+in the Azure Portal, go to your (soon-to-be-created) App Service →
+**Settings → Networking → Outbound traffic → Outbound IP addresses**, and
+also check **"Additional Outbound IP Addresses"** on the same page — Azure
+can use any of that larger set, not just the current ones, especially if
+the plan scales. Allow all of them.
+
+**Important Docker + ufw gotcha:** if you use `ufw`, plain `ufw allow`
+rules usually **don't** apply to Docker's published ports — Docker
+manipulates `iptables` directly and inserts rules that bypass ufw's normal
+filtering. Use the `DOCKER-USER` iptables chain instead, which Docker
+respects:
+
+```bash
+# Replace with each real Azure outbound IP (repeat -I for each one)
+sudo iptables -I DOCKER-USER -p tcp --dport 3306 -s <azure-outbound-ip-1> -j ACCEPT
+sudo iptables -I DOCKER-USER -p tcp --dport 3306 -s <azure-outbound-ip-2> -j ACCEPT
+# then drop everything else on that port
+sudo iptables -I DOCKER-USER -p tcp --dport 3306 -j DROP
+
+# make it survive a reboot
+sudo apt install -y iptables-persistent
+sudo netfilter-persistent save
+```
+
+Also require encrypted connections for the app's database user (MySQL 8
+auto-generates a self-signed TLS cert out of the box, no extra setup
+needed for this to work):
+```bash
+docker compose exec mysql mysql -uroot -p -e \
+  "ALTER USER 'passcount_api'@'%' REQUIRE SSL; FLUSH PRIVILEGES;"
+```
+
+### Step 3 — Create the plain Azure App Service
+
+In the Portal: **App Services → + Create → "Aplikacja internetowa"** (the
+first option — *not* "Aplikacja internetowa i baza danych", that's the one
+that kept failing). This is the same simple wizard that already worked for
+you earlier.
+
+- **Resource group:** `RSC-BuS-01` (reuse your existing one)
+- **Runtime stack:** **.NET 10 (LTS)**
+- **Region:** whatever worked before (Poland Central was fine for the
+  plain Web App — the regional restriction only hit the VNet/managed
+  database resources in the combined wizard)
+- **Pricing plan:** Free (F1) or Basic — either is fine now, since you're
+  not paying for a managed database anymore
+
+### Step 4 — Configure app settings
+
+App Service → **Configuration → Application settings** → add:
 
 | Name | Value |
 |---|---|
-| `Jwt__Key` | A long random secret (32+ bytes). Generate one with `openssl rand -base64 48`. **Never commit this to git.** |
-| `Jwt__Issuer` | `PassCountApi` (or your own value — must match what the API validates) |
+| `Jwt__Key` | A long random secret. Generate with `openssl rand -base64 48`. **Never commit this.** |
+| `Jwt__Issuer` | `PassCountApi` |
 | `Jwt__Audience` | `PassCountClient` |
 | `Database__Provider` | `MySql` |
-| `ConnectionStrings__Default` | Your Azure Database for MySQL connection string (see below) |
+| `ConnectionStrings__Default` | `Server=<your-vps-ip-or-domain>;Port=3306;Database=passcountdb;User=passcount_api;Password=<the password from your .env>;SslMode=Required;` |
 | `Cors__AllowedOrigins__0` | The origin your deployed frontend is served from |
 | `Cors__AllowedOrigins__1` | `capacitor://localhost` (for the Android/iOS app) |
 
 (Double underscores `__` are how Azure App Settings map to nested
-`appsettings.json` sections like `Jwt:Key`.)
+`appsettings.json` sections like `Jwt:Key`.) Click **Save**, then
+**Continue** to restart the app with the new settings.
 
-### Database
+On first startup, `Program.cs` calls `db.Database.Migrate()`, which
+connects out to your VPS over the internet and creates the schema
+automatically — nothing to run manually on the VPS side. Just make sure
+`dotnet ef migrations add InitialCreate` (Local setup, step 3 above) has
+been run once so the migration files exist in the repo before you deploy.
 
-You'll need a real database in Azure for production — SQLite's a local
-file, which doesn't survive App Service restarts/scaling. This project is
-wired up for **Azure Database for MySQL — Flexible Server** (Burstable
-tier is the cheapest — a B1ms instance is a good, low-cost starting point).
-
-The connection string format for the Pomelo MySQL provider looks like:
-```
-Server=your-server.mysql.database.azure.com;Database=passcount;User=youradmin;Password=yourpassword;SslMode=Required;
-```
-Azure shows you the exact string (with your server name pre-filled) on the
-MySQL Flexible Server resource's **Connection strings** page — copy the
-ADO.NET one and just fill in the password.
-
-Once you have it, set it as `ConnectionStrings__Default` above. On first
-run, `Program.cs` calls `db.Database.Migrate()` automatically to create the
-schema — you don't need to run migrations manually against the production
-database, just make sure `dotnet ef migrations add
-InitialCreate` has been run once locally so the migration files exist in
-the repo.
-
-### Deploying the code
+### Step 5 — Deploy the code
 
 From `backend/PassCount.Api`, the same folder shown as "Publish" in Visual
 Studio, or via the Azure CLI:

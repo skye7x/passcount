@@ -1,0 +1,25 @@
+name: passcount
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: passcount-mysql
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "${MYSQL_BIND_ADDRESS:-0.0.0.0}:${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --max-connections=${MYSQL_MAX_CONNECTIONS:-150}
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$${MYSQL_ROOT_PASSWORD}\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+volumes:
+  mysql_data:

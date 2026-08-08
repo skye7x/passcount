@@ -7,7 +7,6 @@
     <UserSecretsId>passcount-api-secrets</UserSecretsId>
   </PropertyGroup>
 
-  <ItemGroup>
   <!--
     EF Core packages are pinned to 9.0.x rather than 10.0.x: the MySQL
     provider (Pomelo) hasn't shipped EF Core 10 support yet as of writing.
@@ -17,10 +16,11 @@
   -->
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.18" />
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.18" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.12" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.18">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>

@@ -12,15 +12,16 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ---------- Database ----------
 // "Database:Provider" is "Sqlite" (zero-setup local dev, see
-// appsettings.Development.json) or "SqlServer" (Azure SQL / production).
+// appsettings.Development.json) or "MySql" (Azure Database for MySQL /
+// production).
 var dbProvider = builder.Configuration["Database:Provider"] ?? "Sqlite";
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    if (dbProvider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase))
+    if (dbProvider.Equals("MySql", StringComparison.OrdinalIgnoreCase))
     {
         var connectionString = builder.Configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException("ConnectionStrings:Default is not configured.");
-        options.UseSqlServer(connectionString);
+        options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
     }
     else
     {

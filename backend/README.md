@@ -42,25 +42,40 @@ backend/PassCount.Api/
 
 I don't have the .NET SDK or internet access to install it in the
 environment I built this in, so **this code has not been run through
-`dotnet build`**. I wrote it carefully using standard, well-established
-ASP.NET Core 8 / EF Core 8 / Identity patterns, but please run a build
-before deploying and send me any compiler errors — I'll fix them.
+`dotnet build`**. I wrote it using standard, well-established ASP.NET Core
+patterns, but please run a build before deploying and send me any compiler
+errors — I'll fix them.
+
+This project deliberately mixes versions: it targets **.NET 10**, but the
+EF Core-related packages (Identity's EF store, SQLite, MySQL/Pomelo,
+migrations tooling) are pinned to **9.0.x** rather than 10.0.x, because the
+MySQL provider (Pomelo) hasn't shipped EF Core 10 support at the time of
+writing. EF Core 9 packages run fine on the .NET 10 runtime — that
+combination is explicitly supported — but if you hit a build error here,
+this mismatch is the first thing to check.
 
 ```bash
 cd backend/PassCount.Api
 dotnet build
 ```
 
+If `dotnet build` complains about specific package versions not being
+found, run (without a version number) to grab whatever's actually
+published, then update the `.csproj` to match and send me the result:
+```bash
+dotnet add package Pomelo.EntityFrameworkCore.MySql
+```
+
 ## Local setup
 
-1. Install the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+1. Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
    if you don't have it.
 2. Install the EF Core CLI tool (one-time):
    ```bash
    dotnet tool install --global dotnet-ef
    ```
 3. From `backend/PassCount.Api`, create the initial migration and database
-   (uses SQLite locally — zero setup, no server needed):
+   (uses SQLite locally — zero setup, no MySQL server needed for dev):
    ```bash
    dotnet ef migrations add InitialCreate
    dotnet run
@@ -81,18 +96,17 @@ fine for local dev, **never use it in production**.
 
 ## Deploying to your Azure App Service
 
-Your screenshots show an App Service named **PassCount** in resource group
-**RSC-BuS-01**, created with the **.NET 10 (LTS)** runtime stack. I built
-this against **.NET 8 (LTS)** instead — it's a long-term-support release I
-have high confidence in getting exactly right by hand, since I couldn't
-compile-check the code myself. Two ways to reconcile that:
+This targets **.NET 10 (LTS)** — matching what you originally picked in the
+Azure portal. (I'd initially written it against .NET 8 since I couldn't
+compile-check the code myself and trusted my own .NET 8 syntax more — but
+.NET 8 support ends November 10, 2026, only a few months out, while .NET 10
+is supported until November 2028. Not worth the tradeoff, so it's back to
+.NET 10 — just be extra ready to send me any build errors, since my
+confidence in exact .NET 10 package versions/syntax is a notch lower than
+.NET 8 without a compiler to check against.)
 
-- **Easiest:** when creating/editing the App Service, pick **.NET 8 (LTS)**
-  as the runtime stack instead of .NET 10. Everything else you configured
-  (resource group, region, free tier plan) stays the same.
-- Or, once you (or I, in a future turn) have verified this builds cleanly,
-  bump `<TargetFramework>` in `PassCount.Api.csproj` to `net10.0` and
-  update the NuGet package versions to match.
+When creating/editing the App Service, pick **.NET 10 (LTS)** as the runtime
+stack.
 
 ### App settings you need to configure in Azure
 
@@ -104,8 +118,8 @@ In the App Service → **Settings → Environment variables** (or "Configuration
 | `Jwt__Key` | A long random secret (32+ bytes). Generate one with `openssl rand -base64 48`. **Never commit this to git.** |
 | `Jwt__Issuer` | `PassCountApi` (or your own value — must match what the API validates) |
 | `Jwt__Audience` | `PassCountClient` |
-| `Database__Provider` | `SqlServer` |
-| `ConnectionStrings__Default` | Your Azure SQL connection string (see below) |
+| `Database__Provider` | `MySql` |
+| `ConnectionStrings__Default` | Your Azure Database for MySQL connection string (see below) |
 | `Cors__AllowedOrigins__0` | The origin your deployed frontend is served from |
 | `Cors__AllowedOrigins__1` | `capacitor://localhost` (for the Android/iOS app) |
 
@@ -115,17 +129,22 @@ In the App Service → **Settings → Environment variables** (or "Configuration
 ### Database
 
 You'll need a real database in Azure for production — SQLite's a local
-file, which doesn't survive App Service restarts/scaling. Cheapest options:
-an **Azure SQL Database (Basic/Serverless tier)** or **Azure Database for
-PostgreSQL Flexible Server (Burstable)** if you'd rather switch providers
-(would need swapping the `Microsoft.EntityFrameworkCore.SqlServer` package
-for `Npgsql.EntityFrameworkCore.PostgreSQL` and `options.UseNpgsql(...)` in
-`Program.cs` — ask me and I'll do that swap).
+file, which doesn't survive App Service restarts/scaling. This project is
+wired up for **Azure Database for MySQL — Flexible Server** (Burstable
+tier is the cheapest — a B1ms instance is a good, low-cost starting point).
 
-Once you have a connection string, set it as `ConnectionStrings__Default`
-above. On first run, `Program.cs` calls `db.Database.Migrate()` automatically
-to create the schema — you don't need to run migrations manually against
-the production database, just make sure `dotnet ef migrations add
+The connection string format for the Pomelo MySQL provider looks like:
+```
+Server=your-server.mysql.database.azure.com;Database=passcount;User=youradmin;Password=yourpassword;SslMode=Required;
+```
+Azure shows you the exact string (with your server name pre-filled) on the
+MySQL Flexible Server resource's **Connection strings** page — copy the
+ADO.NET one and just fill in the password.
+
+Once you have it, set it as `ConnectionStrings__Default` above. On first
+run, `Program.cs` calls `db.Database.Migrate()` automatically to create the
+schema — you don't need to run migrations manually against the production
+database, just make sure `dotnet ef migrations add
 InitialCreate` has been run once locally so the migration files exist in
 the repo.
 
